@@ -8,7 +8,7 @@
 __version__ = "2.0.0"
 
 # 核心模块
-from .core.config import load_config, get_etf_list, get_backtest_params
+from .core.config import load_config, get_etf_list, get_backtest_params, get_benchmark_symbol
 from .core.backtest_engine import BacktestEngine, SignalOnlyBacktest
 from .core.signal_generator import SignalGenerator, Signal
 from .core.factors import FactorCalculator
@@ -40,6 +40,7 @@ __all__ = [
     "load_config",
     "get_etf_list",
     "get_backtest_params",
+    "get_benchmark_symbol",
     "BacktestEngine",
     "SignalOnlyBacktest",
     "SignalGenerator",
