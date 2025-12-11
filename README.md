@@ -78,18 +78,28 @@ uv sync --dev
 
 1. 访问 [tushare.pro](https://tushare.pro/) 注册账号
 2. 登录后进入"个人中心" -> "接口Token"
-3. 复制token并设置环境变量：
+3. 配置token（推荐使用.env文件）：
 
-```bash
-export TUSHARE_TOKEN='你的token'
-```
+   ```bash
+   # 复制环境变量模板
+   cp .env.example .env
 
-或添加到 ~/.bashrc / ~/.zshrc：
+   # 编辑.env文件，填入你的token
+   # TUSHARE_TOKEN=你的token
+   ```
 
-```bash
-echo "export TUSHARE_TOKEN='你的token'" >> ~/.bashrc
-source ~/.bashrc
-```
+4. 或者设置系统环境变量：
+
+   ```bash
+   export TUSHARE_TOKEN='你的token'
+   ```
+
+   或添加到 ~/.bashrc / ~/.zshrc：
+
+   ```bash
+   echo "export TUSHARE_TOKEN='你的token'" >> ~/.bashrc
+   source ~/.bashrc
+   ```
 
 ### 2. 下载数据
 

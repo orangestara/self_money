@@ -4,13 +4,24 @@
 tushare是一个免费的开源财经数据接口包
 官网：https://tushare.pro/
 注册账号后可以免费获取token
+
+使用.env文件管理敏感配置：
+1. 复制 .env.example 为 .env
+2. 在 .env 中设置 TUSHARE_TOKEN=your_token
+3. 确保 .env 不被提交到Git（已在.gitignore中忽略）
 """
 
 import tushare as ts
 import pandas as pd
 import os
+import sys
 from datetime import datetime
 import time
+
+# 添加源码路径
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+
+from etf_rotation.env_loader import get_tushare_token
 
 
 class TushareDataFetcher:
@@ -20,17 +31,22 @@ class TushareDataFetcher:
         """初始化
 
         Args:
-            token: tushare的访问令牌，如果没有则使用环境变量TUSHARE_TOKEN
+            token: tushare的访问令牌，如果没有则依次尝试：
+                   1. 系统环境变量 TUSHARE_TOKEN
+                   2. .env文件中的 TUSHARE_TOKEN
+                   3. 抛出错误提示
         """
         if token is None:
-            token = os.getenv('TUSHARE_TOKEN')
+            token = get_tushare_token()
 
         if token is None:
             raise ValueError(
                 "请设置tushare token:\n"
                 "1. 访问 https://tushare.pro/ 注册账号\n"
                 "2. 获取token\n"
-                "3. 设置环境变量: export TUSHARE_TOKEN='your_token'\n"
+                "3. 创建 .env 文件（复制 .env.example）\n"
+                "4. 在 .env 中设置: TUSHARE_TOKEN='your_token'\n"
+                "   或设置系统环境变量: export TUSHARE_TOKEN='your_token'\n"
                 "   或在代码中传入: TushareDataFetcher(token='your_token')"
             )
 
@@ -198,18 +214,6 @@ def main():
     ]
 
     # 检查token
-    token = os.getenv('TUSHARE_TOKEN')
-    if not token:
-        print("\n⚠️  未检测到TUSHARE_TOKEN环境变量")
-        print("\n请按以下步骤设置:")
-        print("1. 访问 https://tushare.pro/ 注册账号")
-        print("2. 登录后进入个人中心 -> 接口Token")
-        print("3. 复制token并设置环境变量:")
-        print("   export TUSHARE_TOKEN='你的token'")
-        print("\n或者直接在代码中传入token:")
-        print("   fetcher = TushareDataFetcher(token='你的token')")
-        return
-
     try:
         # 创建数据获取器
         fetcher = TushareDataFetcher()

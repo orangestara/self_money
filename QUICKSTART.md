@@ -54,11 +54,21 @@ uv run python demo.py
 
 1. 访问 [tushare.pro](https://tushare.pro/) 注册账号（免费）
 2. 登录后进入"个人中心" -> "接口Token"
-3. 复制token并设置环境变量：
+3. 复制token并配置：
 
-```bash
-export TUSHARE_TOKEN='你的token'
-```
+   ```bash
+   # 复制环境变量模板
+   cp .env.example .env
+
+   # 编辑.env文件，填入你的token
+   # TUSHARE_TOKEN=你的token
+   ```
+
+   或者设置系统环境变量：
+
+   ```bash
+   export TUSHARE_TOKEN='你的token'
+   ```
 
 #### 步骤2：下载数据
 
@@ -184,9 +194,15 @@ max_holdings: 2           # 减少到2只提高集中度
 ### Q: tushare token如何获取？
 A: 访问 https://tushare.pro/ 注册账号（免费），登录后在"个人中心" -> "接口Token"中获取。每日有免费调用次数限制。
 
+### Q: 如何配置token？
+A: 推荐使用.env文件：
+1. 复制 `.env.example` 为 `.env`
+2. 在 `.env` 中设置 `TUSHARE_TOKEN=你的token`
+3. 或者设置系统环境变量 `export TUSHARE_TOKEN='你的token'`
+
 ### Q: 数据下载失败？
 A:
-1. 检查是否正确设置了 `TUSHARE_TOKEN` 环境变量
+1. 检查是否正确设置了 `TUSHARE_TOKEN`（系统环境变量或.env文件）
 2. 检查网络连接
 3. 确认token是否有效（未过期）
 4. 检查tushare调用次数是否超限
