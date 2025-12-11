@@ -3,6 +3,7 @@ ETF轮动策略运行示例
 
 展示如何使用backtrader运行ETF轮动策略
 数据源：tushare
+支持多策略系统
 """
 
 import backtrader as bt
@@ -13,9 +14,15 @@ import sys
 # 添加源码路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from etf_rotation.strategy import ETFRotationStrategy
-from etf_rotation.utils import format_currency, format_percentage
-
+# 导入新架构
+from etf_rotation import (
+    create_backtest_engine,
+    load_config,
+    get_etf_list,
+    get_backtest_params,
+    format_currency,
+    format_percentage
+)
 
 # 使用标准的PandasData
 
@@ -46,109 +53,56 @@ def load_etf_data(symbols, data_dir='../data'):
 
 
 def run_backtest(data_dict, start_date, end_date, initial_cash=1000000):
-    """运行回测"""
+    """运行回测 - 使用新的回测引擎"""
     print("\n" + "=" * 60)
     print("开始运行ETF轮动策略回测")
     print("=" * 60)
 
-    # 创建Cerebro引擎
-    cerebro = bt.Cerebro()
+    # 创建回测引擎
+    engine = create_backtest_engine()
 
-    # 添加策略
-    cerebro.addstrategy(ETFRotationStrategy, log_level=1)
-
-    # 添加数据
-    for symbol, data in data_dict.items():
-        try:
-            datafeed = bt.feeds.PandasData(dataname=data)
-            cerebro.adddata(datafeed, name=symbol)
-            print(f"添加数据: {symbol}")
-        except Exception as e:
-            print(f"添加{symbol}数据失败: {e}")
-            continue
-
-    # 设置初始资金
-    cerebro.broker.setcash(initial_cash)
-
-    # 设置佣金
-    cerebro.broker.setcommission(commission=0.00025)
-
-    # 设置滑点
-    cerebro.slipspread = 0.0003
-    cerebro.slippage = 0.0003
-
-    # 添加分析器
-    cerebro.addanalyzer(bt.analyzers.Returns, _name="returns")
-    cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name="sharpe")
-    cerebro.addanalyzer(bt.analyzers.DrawDown, _name="drawdown")
-    cerebro.addanalyzer(bt.analyzers.TimeReturn, _name="timereturn")
-
-    # 开始回测
-    print(f"\n初始资金: {format_currency(initial_cash)}")
-    print(f"回测期间: {start_date} 至 {end_date}")
-    print("\n开始回测...")
-
-    results = cerebro.run()
-
-    # 获取分析结果
-    strat = results[0]
-    final_value = cerebro.broker.getvalue()
+    # 运行回测
+    print("\n使用新的多策略回测引擎...")
+    result = engine.run_backtest('etf_rotation', data_dict)
 
     # 输出结果
     print("\n" + "=" * 60)
     print("回测结果")
     print("=" * 60)
 
-    print(f"\n最终资金: {format_currency(final_value)}")
-    print(f"总收益: {format_currency(final_value - initial_cash)}")
-    print(f"总收益率: {format_percentage((final_value / initial_cash - 1))}")
+    if 'error' in result:
+        print(f"\n回测失败: {result['error']}")
+        print("=" * 60)
+        return
 
-    # 分析器结果
-    if hasattr(strat, 'analyzers'):
-        returns = strat.analyzers.returns.get_analysis()
-        sharpe = strat.analyzers.sharpe.get_analysis()
-        drawdown = strat.analyzers.drawdown.get_analysis()
-        timereturn = strat.analyzers.timereturn.get_analysis()
+    print(f"\n最终资金: {format_currency(result.get('final_value', 0))}")
+    print(f"总收益: {format_currency(result.get('final_value', 0) - initial_cash)}")
+    print(f"总收益率: {format_percentage(result.get('total_return', 0) / 100)}")
+    print(f"年化收益率: {format_percentage(result.get('annualized_return', 0))}")
+    print(f"夏普比率: {result.get('sharpe_ratio', 0):.2f}")
+    print(f"最大回撤: {format_percentage(result.get('max_drawdown', 0))}")
+    print(f"交易次数: {result.get('total_trades', 0)}")
+    print(f"胜率: {result.get('win_rate', 0):.2%}")
 
-        print(f"\n年化收益率: {format_percentage(returns.get('rtot', 0))}")
-        print(f"夏普比率: {sharpe.get('sharperatio', 0):.2f}")
-        print(f"最大回撤: {format_percentage(drawdown.get('max', {}).get('drawdown', 0) / 100)}")
-        print(f"回撤时长: {drawdown.get('max', {}).get('len', 0)} 天")
+    # 结果已自动保存到output文件夹
 
-    # 绘制图表
-    print("\n正在绘制图表...")
-    try:
-        cerebro.plot(style='candlestick', barup='green', bardown='red')
-    except Exception as e:
-        print(f"绘制图表失败: {e}")
-
-    print("=" * 60)
+    print("\n" + "=" * 60)
 
 
 def main():
     """主函数"""
     # 读取配置
-    config_path = os.path.join(
-        os.path.dirname(__file__),
-        '..', 'config', 'config.yaml'
-    )
-
-    if not os.path.exists(config_path):
-        print(f"配置文件不存在: {config_path}")
-        return
-
-    import yaml
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = yaml.safe_load(f)
+    config = load_config()
 
     # ETF列表（转换为tushare格式）
-    etf_list_config = config['etf_list']
+    etf_list_config = get_etf_list(config)
     etf_list = [etf['symbol'] for etf in etf_list_config]
 
     # 回测参数
-    start_date = config['backtest_params']['start_date']
-    end_date = config['backtest_params']['end_date']
-    initial_cash = config['backtest_params']['initial_cash']
+    backtest_params = get_backtest_params(config)
+    start_date = backtest_params['start_date']
+    end_date = backtest_params['end_date']
+    initial_cash = backtest_params['initial_cash']
 
     # 数据目录
     data_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
@@ -185,6 +139,19 @@ def main():
 
     # 运行回测
     run_backtest(data_dict, start_date, end_date, initial_cash)
+
+    # 提示多策略功能
+    print("\n" + "=" * 60)
+    print("多策略系统已启用！")
+    print("=" * 60)
+    print("\n您还可以尝试以下示例:")
+    print("1. python quick_start_multi_strategy.py - 快速开始多策略系统")
+    print("2. python multi_strategy_demo.py - 完整的多策略演示")
+    print("\n更多功能:")
+    print("- 多策略回测")
+    print("- 买入信号生成")
+    print("- 策略比较分析")
+    print("=" * 60)
 
 
 def create_sample_data(symbols, start_date, end_date, data_dir):

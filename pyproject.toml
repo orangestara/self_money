@@ -11,7 +11,8 @@ dependencies = [
     "pandas>=2.0.0",
     "numpy>=1.24.0",
     "scipy>=1.10.0",
-    "pyyaml>=6.0",
+    "tomli>=2.0.0; python_version < '3.11'",
+    "tomllib; python_version >= '3.11'",
     "matplotlib>=3.7.0",
     "tushare>=1.2.62",
 ]

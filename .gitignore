@@ -51,6 +51,14 @@ data/*.csv
 .pytest_cache/
 .coverage
 
+# Output files
+output/*
+!output/.gitkeep
+
+# Logs
+logs/
+*.log
+
 # Environment variables
 .env
 .env.local
@@ -59,3 +67,6 @@ data/*.csv
 # Backtrader plots
 plot_*.png
 *.pdf
+
+# uv
+.uv/

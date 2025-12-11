@@ -1,0 +1,201 @@
+# ETF轮动策略配置文件
+
+[benchmark]
+symbol = "000300.SH"
+
+[backtest_params]
+start_date = "2020-01-01"
+end_date = "2025-11-31"
+initial_cash = 1_000_000
+
+[cost_params]
+commission = 0.00025
+slippage = 0.0003
+
+[factor_params]
+momentum_window = 25
+slope_window = 20
+ma_window = 20
+rsrs_window = 20
+volatility_window = 20
+volume_short_window = 5
+volume_long_window = 20
+
+[epo_params]
+lambda = 10
+w = 0.2
+
+[trading_params]
+max_holdings = 3
+score_threshold = 0
+min_positive_count = 7
+
+[risk_params]
+stop_loss_base = 0.05
+trailing_stop_base = 0.05
+take_profit_ratio = 0.10
+drop_threshold = 0.05
+volume_filter_threshold = 2.0
+vol_quantile_window = 60
+
+[market_params]
+rebalance_weekday = 0
+rebalance_threshold = 0.05
+
+# 多策略配置
+[strategies]
+# 默认策略配置（所有策略的共同配置）
+default_initial_cash = 1_000_000
+default_commission = 0.00025
+default_slippage = 0.0003
+
+# ETF轮动策略配置
+[strategies.etf_rotation]
+enabled = true
+name = "ETF轮动策略"
+description = "基于多因子模型的ETF轮动策略"
+execute_trades = true
+params = { max_holdings = 3, score_threshold = 0, min_positive_count = 7 }
+
+# 网格交易策略配置
+[strategies.grid_trading]
+enabled = true
+name = "网格交易策略"
+description = "基于价格区间的网格交易策略，适合震荡市场"
+execute_trades = true
+params = { grid_count = 10, grid_spacing = 0.02, price_range_pct = 0.2, take_profit_threshold = 0.1, stop_loss_threshold = 0.15, max_position_ratio = 0.3 }
+
+# 均值回归策略配置（示例）
+[strategies.mean_reversion]
+enabled = false
+name = "均值回归策略"
+description = "基于技术指标的均值回归策略"
+execute_trades = false
+params = { lookback = 20, entry_threshold = 2.0, exit_threshold = 0.5 }
+
+# 动量策略配置（示例）
+[strategies.momentum]
+enabled = false
+name = "动量策略"
+description = "基于价格动量的趋势跟踪策略"
+execute_trades = false
+params = { momentum_window = 20, threshold = 0.05 }
+
+# 防御性ETF组合
+defensive_etfs = ["518880.SH", "513100.SH", "159985.SZ"]
+
+# ETF池配置
+[[etf_list]]
+symbol = "159985.SZ"
+name = "豆粕ETF"
+style = "commodity"
+
+[[etf_list]]
+symbol = "518880.SH"
+name = "黄金ETF"
+style = "commodity"
+
+[[etf_list]]
+symbol = "515220.SH"
+name = "煤炭ETF"
+style = "commodity"
+
+[[etf_list]]
+symbol = "516150.SH"
+name = "稀土ETF"
+style = "commodity"
+
+[[etf_list]]
+symbol = "159870.SZ"
+name = "化工ETF"
+style = "commodity"
+
+[[etf_list]]
+symbol = "512400.SH"
+name = "有色金属ETF"
+style = "commodity"
+
+[[etf_list]]
+symbol = "513100.SH"
+name = "纳指ETF"
+style = "overseas"
+
+[[etf_list]]
+symbol = "513500.SH"
+name = "标普500ETF"
+style = "overseas"
+
+[[etf_list]]
+symbol = "513090.SH"
+name = "香港证券ETF"
+style = "overseas"
+
+[[etf_list]]
+symbol = "513330.SH"
+name = "恒生互联网ETF"
+style = "overseas"
+
+[[etf_list]]
+symbol = "512050.SH"
+name = "A50ETF"
+style = "a_share"
+
+[[etf_list]]
+symbol = "159949.SZ"
+name = "创业板ETF"
+style = "a_share"
+
+[[etf_list]]
+symbol = "512100.SH"
+name = "中证1000ETF"
+style = "a_share"
+
+[[etf_list]]
+symbol = "588000.SH"
+name = "科创50ETF"
+style = "a_share"
+
+[[etf_list]]
+symbol = "588100.SH"
+name = "科创信息技术ETF"
+style = "a_share"
+
+[[etf_list]]
+symbol = "159819.SZ"
+name = "人工智能ETF"
+style = "tech"
+
+[[etf_list]]
+symbol = "512480.SH"
+name = "半导体ETF"
+style = "tech"
+
+[[etf_list]]
+symbol = "510150.SH"
+name = "消费电子ETF"
+style = "tech"
+
+[[etf_list]]
+symbol = "562500.SH"
+name = "机器人ETF"
+style = "tech"
+
+[[etf_list]]
+symbol = "515790.SH"
+name = "光伏ETF"
+style = "tech"
+
+[[etf_list]]
+symbol = "515880.SH"
+name = "通信ETF"
+style = "tech"
+
+[[etf_list]]
+symbol = "159869.SZ"
+name = "游戏ETF"
+style = "tech"
+
+[[etf_list]]
+symbol = "159883.SZ"
+name = "医疗器械ETF"
+style = "tech"

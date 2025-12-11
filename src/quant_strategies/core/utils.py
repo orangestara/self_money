@@ -128,11 +128,6 @@ def simplified_epo_optimization(returns: pd.DataFrame, composite_scores: List[fl
         return np.ones(n) / n
 
 
-def get_weekday(dt) -> int:
-    """获取星期几（0=周一，6=周日）"""
-    return dt.weekday()
-
-
 def format_currency(value: float) -> str:
     """格式化货币显示"""
     if abs(value) >= 1e8:
