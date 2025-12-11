@@ -60,6 +60,38 @@ except ImportError as e:
 
 
 
+def download_real_data():
+    """从Tushare下载真实数据"""
+    print("\n=== 从Tushare下载真实数据 ===\n")
+
+    # 检查依赖
+    try:
+        import tushare as ts
+        import pandas as pd
+    except ImportError:
+        print("⚠️  错误：缺少 tushare 库")
+        print("请先安装依赖：")
+        print("  uv sync")
+        print("  或")
+        print("  pip install tushare pandas")
+        return
+
+    # 运行数据下载脚本
+    script_path = 'data_fetcher.py'
+
+    if os.path.exists(script_path):
+        import subprocess
+        print("正在从Tushare下载数据...")
+        print("(注意：需要先配置TUSHARE_TOKEN环境变量)\n")
+        result = subprocess.run([sys.executable, script_path], capture_output=False)
+        if result.returncode == 0:
+            print("\n✓ 数据下载完成！")
+        else:
+            print("\n❌ 数据下载失败，请检查错误信息")
+    else:
+        print(f"错误：找不到 {script_path}")
+
+
 def create_demo_data():
     """创建模拟数据"""
     print("\n=== 创建模拟数据 ===\n")

@@ -220,7 +220,36 @@ results = searcher.search(n_iterations=50, n_initial_points=10)
 
 ## 📊 示例
 
-### 运行策略
+### 统一执行入口（推荐）
+
+使用项目根目录的 `run.py` 统一执行各种功能：
+
+```bash
+# 查看帮助
+python run.py --help
+
+# 创建模拟数据（首次使用）
+python run.py --create-demo-data
+
+# 运行ETF轮动策略
+python run.py --run-etf
+
+# 运行网格交易策略
+python run.py --run-grid
+
+# 运行参数优化演示
+python run.py --optimize-params
+
+# 运行多策略演示
+python run.py --demo-multi
+
+# 运行完整演示（所有功能）
+python run.py --all
+```
+
+### 直接运行示例文件
+
+也可以直接运行 examples 目录中的脚本：
 
 ```bash
 # ETF轮动策略
@@ -235,14 +264,8 @@ python parameter_optimization.py
 
 # 快速开始
 python quick_start_multi_strategy.py
-```
 
-### 快速体验（模拟数据）
-
-如果没有真实数据，可以使用模拟数据快速体验：
-
-```bash
-cd examples
+# 创建模拟数据
 python run_with_demo_data.py
 ```
 
