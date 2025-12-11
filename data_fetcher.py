@@ -75,15 +75,52 @@ class TushareDataFetcher:
         try:
             print(f"正在下载 {ts_code}...")
 
-            # 使用pro_api获取数据
-            df = self.pro.fund_daily(
-                ts_code=ts_code,
-                start_date=start_date,
-                end_date=end_date
-            )
+            # 尝试不同的数据获取方法
+            df = None
+
+            # 方法1: 尝试 fund_daily (基金日线数据)
+            try:
+                df = self.pro.fund_daily(
+                    ts_code=ts_code,
+                    start_date=start_date,
+                    end_date=end_date
+                )
+                if df is not None and not df.empty:
+                    print(f"  ✓ 使用 fund_daily 获取到 {len(df)} 条记录")
+            except Exception as e:
+                print(f"  ⚠️  fund_daily 失败: {str(e)[:50]}")
+                df = None
+
+            # 方法2: 如果 fund_daily 失败，尝试 index_daily (指数日线数据)
+            if df is None or df.empty:
+                try:
+                    df = self.pro.index_daily(
+                        ts_code=ts_code,
+                        start_date=start_date,
+                        end_date=end_date
+                    )
+                    if df is not None and not df.empty:
+                        print(f"  ✓ 使用 index_daily 获取到 {len(df)} 条记录")
+                except Exception as e:
+                    print(f"  ⚠️  index_daily 失败: {str(e)[:50]}")
+                    df = None
+
+            # 方法3: 如果都失败，尝试 daily (通用日线数据)
+            if df is None or df.empty:
+                try:
+                    df = self.pro.daily(
+                        ts_code=ts_code,
+                        start_date=start_date,
+                        end_date=end_date
+                    )
+                    if df is not None and not df.empty:
+                        print(f"  ✓ 使用 daily 获取到 {len(df)} 条记录")
+                except Exception as e:
+                    print(f"  ⚠️  daily 失败: {str(e)[:50]}")
+                    df = None
 
             if df is None or df.empty:
-                print(f"  警告: {ts_code} 无数据")
+                print(f"  ❌ 所有方法都失败，{ts_code} 无数据")
                 return None
 
             # 按日期排序
@@ -91,15 +128,25 @@ class TushareDataFetcher:
             df['trade_date'] = pd.to_datetime(df['trade_date'], format='%Y%m%d')
             df.set_index('trade_date', inplace=True)
 
-            # 重命名列
-            df.rename(columns={
+            # 重命名列（兼容不同的数据格式）
+            rename_dict = {
                 'open': 'Open',
                 'high': 'High',
                 'low': 'Low',
                 'close': 'Close',
                 'vol': 'Volume',
                 'amount': 'Amount'
-            }, inplace=True)
+            }
+            # 只重命名存在的列
+            for old_col, new_col in rename_dict.items():
+                if old_col in df.columns:
+                    df.rename(columns={old_col: new_col}, inplace=True)
+
+            # 确保有必要的列
+            required_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+            missing_cols = [col for col in required_cols if col not in df.columns]
+            if missing_cols:
+                print(f"  ⚠️  缺少列: {missing_cols}")
 
             # 保存数据
             os.makedirs(data_dir, exist_ok=True)
@@ -107,7 +154,7 @@ class TushareDataFetcher:
             filepath = os.path.join(data_dir, filename)
             df.to_csv(filepath)
 
-            print(f"  成功下载 {len(df)} 条记录，保存到 {filepath}")
+            print(f"  ✓ 成功保存 {len(df)} 条记录到 {filepath}")
 
             # 避免请求过于频繁
             time.sleep(0.2)
@@ -115,7 +162,7 @@ class TushareDataFetcher:
             return df
 
         except Exception as e:
-            print(f"  下载 {ts_code} 失败: {e}")
+            print(f"  ❌ 下载 {ts_code} 失败: {e}")
             return None
 
     def download_benchmark_data(self, ts_code='000300.SH', start_date='20200101', end_date='20241231', data_dir='data'):
@@ -123,6 +170,7 @@ class TushareDataFetcher:
         try:
             print(f"正在下载基准指数 {ts_code}...")
 
+            # 使用 index_daily 获取指数数据
             df = self.pro.index_daily(
                 ts_code=ts_code,
                 start_date=start_date,
@@ -130,7 +178,7 @@ class TushareDataFetcher:
             )
 
             if df is None or df.empty:
-                print(f"  警告: {ts_code} 无数据")
+                print(f"  ❌ {ts_code} 无数据")
                 return None
 
             # 按日期排序
@@ -154,12 +202,12 @@ class TushareDataFetcher:
             filepath = os.path.join(data_dir, filename)
             df.to_csv(filepath)
 
-            print(f"  成功下载 {len(df)} 条记录")
+            print(f"  ✓ 成功下载 {len(df)} 条记录")
 
             return df
 
         except Exception as e:
-            print(f"  下载基准指数失败: {e}")
+            print(f"  ❌ 下载基准指数失败: {e}")
             return None
 
     def download_multiple_etfs(self, etf_list, start_date, end_date, data_dir='data'):

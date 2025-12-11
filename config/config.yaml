@@ -1,7 +1,7 @@
 # ETF轮动策略配置文件
 
 # 基础设置
-benchmark: "000300.SS"  # 沪深300指数
+benchmark: "000300.SH"  # 沪深300指数
 
 # ETF池配置
 etf_list:
