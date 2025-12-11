@@ -12,7 +12,7 @@ import pandas as pd
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 # 导入核心模块
-from etf_rotation import (
+from quant_strategies import (
     create_backtest_engine,
     create_strategy_manager,
     create_signal_generator,

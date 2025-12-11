@@ -15,7 +15,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 # 导入新架构
-from etf_rotation import (
+from quant_strategies import (
     create_backtest_engine,
     load_config,
     get_etf_list,

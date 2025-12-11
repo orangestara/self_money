@@ -11,7 +11,7 @@ import pandas as pd
 # 添加源码路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from etf_rotation import (
+from quant_strategies import (
     create_strategy_manager,
     create_backtest_engine,
     create_signal_generator,
@@ -234,7 +234,7 @@ def demo_strategy_factory():
     print("演示4: 策略工厂")
     print("=" * 60)
 
-    from etf_rotation import StrategyFactory
+    from quant_strategies import StrategyFactory
 
     # 创建工厂
     factory = StrategyFactory()
