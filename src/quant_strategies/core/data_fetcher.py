@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 
 # 添加源码路径
+# 将src目录添加到Python路径，以便导入quant_strategies模块
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 try:
@@ -64,7 +65,9 @@ class TushareDataFetcher:
 
         # 尝试从.env文件读取
         # 从core目录找到项目根目录
-        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+        # data_fetcher.py: /src/quant_strategies/core/data_fetcher.py
+        # 项目根目录: / (需要三级父目录)
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
         env_file = os.path.join(project_root, '.env')
         if os.path.exists(env_file):
             with open(env_file, 'r', encoding='utf-8') as f:
