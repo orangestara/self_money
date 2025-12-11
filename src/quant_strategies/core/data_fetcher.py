@@ -101,10 +101,10 @@ class TushareDataFetcher:
             return None
 
     def download_daily_data(self, ts_code: str, start_date: str, end_date: str, retry: int = 3) -> Optional[pd.DataFrame]:
-        """下载日线数据
+        """下载ETF日线数据（使用fund_nav接口）
 
         Args:
-            ts_code: 股票代码
+            ts_code: ETF代码
             start_date: 开始日期 (YYYYMMDD)
             end_date: 结束日期 (YYYYMMDD)
             retry: 重试次数
@@ -120,12 +120,11 @@ class TushareDataFetcher:
 
                 print(f"   下载 {ts_code} ({start} 到 {end})...", end=' ')
 
-                # 使用tushare获取日线数据
-                df = self.pro.daily(
+                # 使用tushare获取ETF净值数据（注意：ETF使用fund_nav而不是daily）
+                df = self.pro.fund_nav(
                     ts_code=ts_code,
                     start_date=start,
-                    end_date=end,
-                    fields='ts_code,trade_date,open,high,low,close,pre_close,change,pct_chg,vol,amount'
+                    end_date=end
                 )
 
                 if df.empty:
@@ -133,15 +132,23 @@ class TushareDataFetcher:
                     return None
 
                 # 处理数据
-                df['trade_date'] = pd.to_datetime(df['trade_date'], format='%Y%m%d')
-                df.set_index('trade_date', inplace=True)
+                df['nav_date'] = pd.to_datetime(df['nav_date'], format='%Y%m%d')
+                df.set_index('nav_date', inplace=True)
                 df.sort_index(inplace=True)
 
-                # 标准化列名
-                df.columns = [col.title() for col in df.columns]
+                # 转换列名为标准OHLC格式
+                # fund_nav 返回: nav_date, ts_code, unit_nav, accum_nav, adj_nav等
+                # 转换为: Date, Open, High, Low, Close, Volume
+                standardized_df = pd.DataFrame(index=df.index)
+                standardized_df['Open'] = df['unit_nav']  # 使用单位净值作为价格
+                standardized_df['High'] = df['unit_nav']
+                standardized_df['Low'] = df['unit_nav']
+                standardized_df['Close'] = df['unit_nav']
+                standardized_df['Volume'] = 0  # ETF没有交易量数据
+                standardized_df['Amount'] = 0  # ETF没有成交额数据
 
-                print(f"✓ {len(df)} 条记录")
-                return df
+                print(f"✓ {len(standardized_df)} 条记录")
+                return standardized_df
 
             except Exception as e:
                 if attempt < retry - 1:
