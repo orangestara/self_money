@@ -34,7 +34,8 @@ src/quant_strategies/
 │   ├── config.py            # 配置加载
 │   ├── factors.py           # 因子计算
 │   ├── risk_manager.py      # 风控管理
-│   └── utils.py             # 工具函数
+│   ├── utils.py             # 工具函数
+│   └── data_fetcher.py      # 数据获取器（Tushare）
 ├── managers/          # 管理模块
 │   ├── strategy_manager.py  # 策略管理
 │   ├── strategy_factory.py  # 策略工厂
@@ -111,19 +112,49 @@ python run_with_demo_data.py
 
 这将自动在 `data/` 目录中创建模拟的ETF数据文件。
 
-#### 方法2：准备真实数据
+#### 方法2：使用真实数据（推荐生产环境）
 
-您需要手动准备CSV格式的数据文件，保存在 `data/` 目录中：
+项目内置了tushare数据下载功能，可以自动从tushare获取ETF数据：
+
+```bash
+# 方法1：使用统一执行入口
+python run.py --download-real-data
+
+# 方法2：直接运行数据下载脚本
+python src/quant_strategies/core/data_fetcher.py
+
+# 检查数据完整性
+python src/quant_strategies/core/data_fetcher.py --check-only
+
+# 仅下载基准指数
+python src/quant_strategies/core/data_fetcher.py --benchmark-only
+```
+
+下载的数据将保存在 `data/` 目录中：
+```
+data/
+├── 000300.SH.csv  # 沪深300指数（基准）
+├── 159985.SZ.csv  # 豆粕ETF
+├── 518880.SH.csv  # 黄金ETF
+├── 513100.SH.csv  # 纳指ETF
+└── ...
+```
+
+**注意**：使用此功能需要先配置tushare token（见[环境配置](#环境配置)）。
+
+#### 方法3：手动准备数据
+
+您也可以手动准备CSV格式的数据文件，保存在 `data/` 目录中：
 
 ```
 data/
 ├── 159985.SZ.csv  # 豆粕ETF
-├── 518880.SS.csv  # 黄金ETF
-├── 513100.SS.csv  # 纳指ETF
+├── 518880.SH.csv  # 黄金ETF
+├── 513100.SH.csv  # 纳指ETF
 └── ...
 ```
 
-**注意**：项目中没有内置数据下载功能，您需要从其他数据源（如tushare、yahoo finance等）获取数据并保存为CSV格式。
+**注意**：使用此方法需要从其他数据源（如tushare、yahoo finance等）获取数据并保存为CSV格式。
 
 ### 数据格式
 

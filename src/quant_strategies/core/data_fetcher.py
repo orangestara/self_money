@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 
 # 添加源码路径
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 try:
     import tushare as ts
@@ -63,7 +63,9 @@ class TushareDataFetcher:
             return token
 
         # 尝试从.env文件读取
-        env_file = os.path.join(os.path.dirname(__file__), '.env')
+        # 从core目录找到项目根目录
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+        env_file = os.path.join(project_root, '.env')
         if os.path.exists(env_file):
             with open(env_file, 'r', encoding='utf-8') as f:
                 for line in f:

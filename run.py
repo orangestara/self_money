@@ -77,7 +77,7 @@ def download_real_data():
         return
 
     # 运行数据下载脚本
-    script_path = 'data_fetcher.py'
+    script_path = os.path.join('src', 'quant_strategies', 'core', 'data_fetcher.py')
 
     if os.path.exists(script_path):
         import subprocess
@@ -251,6 +251,7 @@ def show_help():
 命令:
   --help, -h              显示此帮助信息
   --create-demo-data      创建模拟数据（用于测试）
+  --download-real-data    从Tushare下载真实数据
   --run-etf               运行ETF轮动策略
   --run-grid              运行网格交易策略
   --optimize-params       运行参数优化演示
@@ -260,6 +261,9 @@ def show_help():
 示例:
   # 创建模拟数据
   python run.py --create-demo-data
+
+  # 下载真实数据（需要配置Tushare Token）
+  python run.py --download-real-data
 
   # 运行ETF轮动策略
   python run.py --run-etf
@@ -272,8 +276,8 @@ def show_help():
 
 注意:
   - 首次使用请先运行 --create-demo-data 创建模拟数据
+  - 如需使用真实数据，请先配置Tushare Token，然后运行 --download-real-data
   - 所有结果会保存在 output/ 目录中
-  - 如需使用真实数据，请将CSV文件放在 data/ 目录中
 """)
 
 
@@ -311,6 +315,8 @@ def main():
 
     parser.add_argument('--create-demo-data', action='store_true',
                         help='创建模拟数据（用于测试）')
+    parser.add_argument('--download-real-data', action='store_true',
+                        help='从Tushare下载真实数据')
     parser.add_argument('--run-etf', action='store_true',
                         help='运行ETF轮动策略')
     parser.add_argument('--run-grid', action='store_true',
@@ -332,6 +338,9 @@ def main():
     # 执行相应命令
     if args.create_demo_data:
         create_demo_data()
+
+    if args.download_real_data:
+        download_real_data()
 
     if args.run_etf:
         run_etf_rotation()
