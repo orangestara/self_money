@@ -234,7 +234,7 @@ class GridTradingStrategy(BaseStrategy):
 
     def _calculate_grid_position(self, current_price: float) -> float:
         """计算当前价格在网格中的位置"""
-        if not self.grid_levels or len(self.grid_levels) == 0:
+        if self.grid_levels is None or len(self.grid_levels) == 0:
             return 0.5
 
         min_price = min(self.grid_levels)

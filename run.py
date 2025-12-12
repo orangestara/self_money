@@ -155,13 +155,16 @@ def run_etf_rotation():
     print("\n" + "=" * 60)
     print("回测结果")
     print("=" * 60)
-    print(f"\n最终资金: {format_currency(result.get('final_value', 0))}")
-    print(f"总收益: {format_currency(result.get('final_value', 0) - 1000000)}")
-    print(f"总收益率: {format_percentage(result.get('total_return', 0) / 100)}")
-    print(f"夏普比率: {result.get('sharpe_ratio', 0):.2f}")
-    print(f"最大回撤: {format_percentage(result.get('max_drawdown', 0))}")
-    print(f"交易次数: {result.get('total_trades', 0)}")
-    print(f"胜率: {result.get('win_rate', 0):.2%}")
+    print(f"\n最终资金: {format_currency(result.get('final_value', 0) or 0)}")
+    print(f"总收益: {format_currency((result.get('final_value', 0) or 0) - 1000000)}")
+    print(f"总收益率: {format_percentage((result.get('total_return', 0) or 0) / 100)}")
+    sharpe_ratio = result.get('sharpe_ratio', 0) or 0
+    print(f"夏普比率: {sharpe_ratio:.2f}")
+    max_drawdown = result.get('max_drawdown', 0) or 0
+    print(f"最大回撤: {format_percentage(max_drawdown)}")
+    print(f"交易次数: {result.get('total_trades', 0) or 0}")
+    win_rate = result.get('win_rate', 0) or 0
+    print(f"胜率: {win_rate:.2%}")
     print("\n✓ 结果已自动保存到 output/results/ 目录")
 
 
@@ -202,13 +205,16 @@ def run_grid_trading():
     print("\n" + "=" * 60)
     print("回测结果")
     print("=" * 60)
-    print(f"\n最终资金: {format_currency(result.get('final_value', 0))}")
-    print(f"总收益: {format_currency(result.get('final_value', 0) - 1000000)}")
-    print(f"总收益率: {format_percentage(result.get('total_return', 0) / 100)}")
-    print(f"夏普比率: {result.get('sharpe_ratio', 0):.2f}")
-    print(f"最大回撤: {format_percentage(result.get('max_drawdown', 0))}")
-    print(f"交易次数: {result.get('total_trades', 0)}")
-    print(f"胜率: {result.get('win_rate', 0):.2%}")
+    print(f"\n最终资金: {format_currency(result.get('final_value', 0) or 0)}")
+    print(f"总收益: {format_currency((result.get('final_value', 0) or 0) - 1000000)}")
+    print(f"总收益率: {format_percentage((result.get('total_return', 0) or 0) / 100)}")
+    sharpe_ratio = result.get('sharpe_ratio', 0) or 0
+    print(f"夏普比率: {sharpe_ratio:.2f}")
+    max_drawdown = result.get('max_drawdown', 0) or 0
+    print(f"最大回撤: {format_percentage(max_drawdown)}")
+    print(f"交易次数: {result.get('total_trades', 0) or 0}")
+    win_rate = result.get('win_rate', 0) or 0
+    print(f"胜率: {win_rate:.2%}")
     print("\n✓ 结果已自动保存到 output/results/ 目录")
 
 
