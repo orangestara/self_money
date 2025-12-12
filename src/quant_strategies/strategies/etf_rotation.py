@@ -187,16 +187,16 @@ class ETFRotationStrategy(BaseStrategy):
         try:
             hist = []
             for i in range(min(days, len(data))):
-                idx = len(data) - 1 - i
-                if idx < 0:
+                ago = i  # 从当前bar往回ago个bar
+                if ago >= len(data):
                     break
                 hist.append({
-                    'datetime': data.datetime.get(idx),
-                    'open': data.open[idx],
-                    'high': data.high[idx],
-                    'low': data.low[idx],
-                    'close': data.close[idx],
-                    'volume': data.volume[idx],
+                    'datetime': data.datetime.get(ago=-ago),
+                    'Open': data.open.get(ago=-ago),
+                    'High': data.high.get(ago=-ago),
+                    'Low': data.low.get(ago=-ago),
+                    'Close': data.close.get(ago=-ago),
+                    'Volume': data.volume.get(ago=-ago),
                 })
 
             if len(hist) < 10:

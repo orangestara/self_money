@@ -37,10 +37,11 @@ class FactorCalculator:
     ) -> Dict:
         """计算所有因子"""
         try:
-            close = data['close'].values
-            high = data['high'].values
-            low = data['low'].values
-            volume = data['volume']
+            # 使用tolist()转换为列表，然后转换为numpy数组
+            close = np.array(data['Close'].tolist(), dtype=float)
+            high = np.array(data['High'].tolist(), dtype=float)
+            low = np.array(data['Low'].tolist(), dtype=float)
+            volume = np.array(data['Volume'].tolist(), dtype=float)
 
             # 成交量过滤
             vol_ratio = calculate_volume_ratio(volume, self.volume_short_window, self.volume_long_window)
@@ -49,13 +50,16 @@ class FactorCalculator:
 
             # 跌幅过滤
             if len(close) >= 4:
-                day1_return = close[-1] / close[-2] - 1
-                day2_return = close[-2] / close[-3] - 1
-                day3_return = close[-3] / close[-4] - 1
-                if (day1_return < -self.drop_threshold or
-                    day2_return < -self.drop_threshold or
-                    day3_return < -self.drop_threshold or
-                    (day1_return + day2_return + day3_return) < -0.1):
+                try:
+                    day1_return = close[-1] / close[-2] - 1
+                    day2_return = close[-2] / close[-3] - 1
+                    day3_return = close[-3] / close[-4] - 1
+                    if (day1_return < -self.drop_threshold or
+                        day2_return < -self.drop_threshold or
+                        day3_return < -self.drop_threshold or
+                        (day1_return + day2_return + day3_return) < -0.1):
+                        return {'composite': 0.0}
+                except Exception:
                     return {'composite': 0.0}
 
             # 1. 动量因子（年化收益和判定系数）
@@ -98,10 +102,19 @@ class FactorCalculator:
         try:
             # 2.1 基础子因子
             # 斜率R²因子
+            if len(close) < self.slope_window:
+                return 0.0
             x_slope = np.arange(self.slope_window)
             y_slope = close[-self.slope_window:]
-            slope, _, r_value, _, _ = linregress(x_slope, y_slope)
-            slope_r2 = slope * (r_value ** 2)
+            # 避免所有y值相同的情况
+            if np.all(y_slope == y_slope[0]):
+                slope_r2 = 0.0
+            else:
+                try:
+                    slope, _, r_value, _, _ = linregress(x_slope, y_slope)
+                    slope_r2 = slope * (r_value ** 2)
+                except Exception:
+                    slope_r2 = 0.0
 
             # 均线因子
             ma = np.mean(close[-self.ma_window:])
@@ -112,12 +125,26 @@ class FactorCalculator:
             for i in range(min(self.rsrs_window, 5)):
                 h = high[-(self.rsrs_window - i)]
                 l = low[-(self.rsrs_window - i)]
-                s, _, r, _, _ = linregress([0, 1], [l, h])
-                beta_list.append(s * r)
-            rsrs = np.mean(beta_list)
+                # 避免l和h相同的情况
+                if h != l:
+                    try:
+                        s, _, r, _, _ = linregress([0, 1], [l, h])
+                        beta_list.append(s * r)
+                    except Exception:
+                        beta_list.append(0.0)
+                else:
+                    beta_list.append(0.0)
+            rsrs = np.mean(beta_list) if beta_list else 0.0
 
             # 波动率因子
-            returns_vol = np.diff(close[-self.volatility_window:]) / close[-self.volatility_window:-1]
+            close_window = close[-self.volatility_window:]
+            if len(close_window) < 2:
+                returns_vol = np.array([])
+            else:
+                try:
+                    returns_vol = np.diff(close_window) / close_window[:-1]
+                except Exception:
+                    returns_vol = np.array([])
             volatility = np.std(returns_vol) if len(returns_vol) > 0 else 0
             volatility_factor = 1 / (1 + volatility)
 
@@ -149,4 +176,6 @@ class FactorCalculator:
 
         except Exception as e:
             print(f"计算质量因子失败: {e}")
+            import traceback
+            traceback.print_exc()
             return 0.0
