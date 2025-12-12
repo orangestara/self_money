@@ -79,19 +79,19 @@ class TushareDataFetcher:
                             return value.strip().strip('"\'')
         return None
 
-    def get_stock_basic(self, ts_code: str) -> Optional[Dict]:
-        """获取股票基本信息
+    def get_etf_basic(self, ts_code: str) -> Optional[Dict]:
+        """获取ETF基本信息
 
         Args:
-            ts_code: 股票代码，如 '159985.SZ'
+            ts_code: ETF代码，如 '159985.SZ'
 
         Returns:
             基本信息字典或None
         """
         try:
-            df = self.pro.stock_basic(
-                ts_code=ts_code,
-                fields='ts_code,symbol,name,area,industry,market,exchange,list_status'
+            df = self.pro.fund_basic(
+                market='E',
+                ts_code=ts_code
             )
             if not df.empty:
                 return df.iloc[0].to_dict()
@@ -100,13 +100,30 @@ class TushareDataFetcher:
             print(f"   ⚠️  获取 {ts_code} 基本信息失败: {e}")
             return None
 
-    def download_daily_data(self, ts_code: str, start_date: str, end_date: str, retry: int = 3) -> Optional[pd.DataFrame]:
-        """下载ETF日线数据（使用fund_nav接口）
+    def get_etf_list_date(self, ts_code: str) -> Optional[str]:
+        """获取ETF上市日期
 
         Args:
             ts_code: ETF代码
-            start_date: 开始日期 (YYYYMMDD)
-            end_date: 结束日期 (YYYYMMDD)
+
+        Returns:
+            上市日期字符串 (YYYY-MM-DD) 或 None
+        """
+        basic_info = self.get_etf_basic(ts_code)
+        if basic_info and basic_info.get('list_date'):
+            # list_date 格式为 YYYYMMDD，转换为 YYYY-MM-DD
+            list_date = basic_info['list_date']
+            if len(list_date) == 8:
+                return f"{list_date[:4]}-{list_date[4:6]}-{list_date[6:8]}"
+        return None
+
+    def download_daily_data(self, ts_code: str, start_date: str, end_date: str, retry: int = 3) -> Optional[pd.DataFrame]:
+        """下载ETF日线数据（使用fund_daily接口）
+
+        Args:
+            ts_code: ETF代码
+            start_date: 开始日期 (YYYY-MM-DD)
+            end_date: 结束日期 (YYYY-MM-DD)
             retry: 重试次数
 
         Returns:
@@ -118,13 +135,26 @@ class TushareDataFetcher:
                 start = datetime.strptime(start_date, '%Y-%m-%d').strftime('%Y%m%d')
                 end = datetime.strptime(end_date, '%Y-%m-%d').strftime('%Y%m%d')
 
+                # 检查ETF上市日期，如果start_date早于上市日期，则调整start_date
+                etf_list_date = self.get_etf_list_date(ts_code)
+                if etf_list_date:
+                    etf_list_date_parsed = datetime.strptime(etf_list_date, '%Y-%m-%d')
+                    requested_start = datetime.strptime(start_date, '%Y-%m-%d')
+
+                    if requested_start < etf_list_date_parsed:
+                        print(f"   ⚠️  请求的起始日期 {start_date} 早于ETF上市日期 {etf_list_date}")
+                        start_date = etf_list_date
+                        start = datetime.strptime(start_date, '%Y-%m-%d').strftime('%Y%m%d')
+                        print(f"   ✓ 自动调整为从上市日期开始: {start_date}")
+
                 print(f"   下载 {ts_code} ({start} 到 {end})...", end=' ')
 
-                # 使用tushare获取ETF净值数据（注意：ETF使用fund_nav而不是daily）
-                df = self.pro.fund_nav(
+                # 使用tushare获取ETF日线数据
+                df = self.pro.fund_daily(
                     ts_code=ts_code,
                     start_date=start,
-                    end_date=end
+                    end_date=end,
+                    fields='trade_date,open,high,low,close,vol,amount'
                 )
 
                 if df.empty:
@@ -132,20 +162,20 @@ class TushareDataFetcher:
                     return None
 
                 # 处理数据
-                df['nav_date'] = pd.to_datetime(df['nav_date'], format='%Y%m%d')
-                df.set_index('nav_date', inplace=True)
+                df['trade_date'] = pd.to_datetime(df['trade_date'], format='%Y%m%d')
+                df.set_index('trade_date', inplace=True)
                 df.sort_index(inplace=True)
 
                 # 转换列名为标准OHLC格式
-                # fund_nav 返回: nav_date, ts_code, unit_nav, accum_nav, adj_nav等
-                # 转换为: Date, Open, High, Low, Close, Volume
+                # fund_daily 返回: trade_date, open, high, low, close, vol, amount
+                # 转换为: Date, Open, High, Low, Close, Volume, Amount
                 standardized_df = pd.DataFrame(index=df.index)
-                standardized_df['Open'] = df['unit_nav']  # 使用单位净值作为价格
-                standardized_df['High'] = df['unit_nav']
-                standardized_df['Low'] = df['unit_nav']
-                standardized_df['Close'] = df['unit_nav']
-                standardized_df['Volume'] = 0  # ETF没有交易量数据
-                standardized_df['Amount'] = 0  # ETF没有成交额数据
+                standardized_df['Open'] = df['open']
+                standardized_df['High'] = df['high']
+                standardized_df['Low'] = df['low']
+                standardized_df['Close'] = df['close']
+                standardized_df['Volume'] = df['vol']
+                standardized_df['Amount'] = df['amount']
 
                 print(f"✓ {len(standardized_df)} 条记录")
                 return standardized_df
