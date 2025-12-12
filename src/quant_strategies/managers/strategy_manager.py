@@ -253,6 +253,7 @@ class StrategyManager:
             returns = strat.analyzers.returns.get_analysis()
             sharpe = strat.analyzers.sharpe.get_analysis()
             drawdown = strat.analyzers.drawdown.get_analysis()
+            timereturn = strat.analyzers.timereturn.get_analysis()
 
             stats.update({
                 'annualized_return': returns.get('rtot', 0),
@@ -260,6 +261,29 @@ class StrategyManager:
                 'max_drawdown': drawdown.get('max', {}).get('drawdown', 0) / 100,
                 'drawdown_len': drawdown.get('max', {}).get('len', 0)
             })
+
+            # 添加收益曲线数据
+            if timereturn:
+                returns_data = []
+                for date, ret in timereturn.items():
+                    if isinstance(date, (int, float)):
+                        date = datetime.fromtimestamp(date).strftime('%Y-%m-%d')
+                    returns_data.append({
+                        'date': date,
+                        'value': ret * 100
+                    })
+                stats['returns'] = returns_data
+
+            # 添加回撤曲线数据
+            if 'max' in drawdown and 'drawdown' in drawdown['max']:
+                drawdown_data = []
+                for key, value in drawdown['max'].items():
+                    if 'drawdown' in key:
+                        drawdown_data.append({
+                            'date': key,
+                            'value': value
+                        })
+                stats['drawdown'] = drawdown_data
 
         # 保存统计信息
         self.stats[strategy_name] = stats

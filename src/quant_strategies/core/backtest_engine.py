@@ -7,6 +7,8 @@
 import backtrader as bt
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 import os
@@ -37,8 +39,12 @@ class BacktestEngine:
         self.backtest_params = get_backtest_params(self.config)
         self.cost_params = get_cost_params(self.config)
 
-        # 输出目录
-        self.output_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'output')
+        # 输出目录 - 计算到项目根目录
+        current_dir = os.path.dirname(os.path.dirname(__file__))  # core/
+        parent_dir = os.path.dirname(current_dir)  # quant_strategies/
+        project_root = os.path.dirname(parent_dir)  # src/
+        self.output_dir = os.path.join(project_root, '..', 'output')
+        self.output_dir = os.path.abspath(self.output_dir)
         os.makedirs(os.path.join(self.output_dir, 'results'), exist_ok=True)
         os.makedirs(os.path.join(self.output_dir, 'logs'), exist_ok=True)
         os.makedirs(os.path.join(self.output_dir, 'charts'), exist_ok=True)
@@ -109,6 +115,12 @@ class BacktestEngine:
 
         # 保存结果
         self.results[strategy_name] = result
+
+        # 保存到文件
+        self._save_result(strategy_name, result)
+
+        # 绘制图表
+        self._plot_result(strategy_name, result)
 
         return result
 
@@ -350,6 +362,149 @@ class BacktestEngine:
             self.results = json.load(f)
 
         print(f"已加载 {len(self.results)} 个策略的回测结果")
+
+    def _save_result(self, strategy_name: str, result: Dict[str, Any]):
+        """保存回测结果到文件"""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{strategy_name}_result_{timestamp}.json"
+        filepath = os.path.join(self.output_dir, 'results', filename)
+
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(result, f, ensure_ascii=False, indent=2, default=str)
+
+        print(f"✓ 结果已保存到: {filepath}")
+
+    def _plot_result(self, strategy_name: str, result: Dict[str, Any]):
+        """绘制回测结果图表"""
+        try:
+            # 设置中文字体
+            plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'DejaVu Sans']
+            plt.rcParams['axes.unicode_minus'] = False
+
+            # 创建图表
+            fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+            fig.suptitle(f'{strategy_name} 策略回测结果', fontsize=16, fontweight='bold')
+
+            # 1. 收益曲线
+            ax1 = axes[0, 0]
+            if 'returns' in result and isinstance(result['returns'], list) and len(result['returns']) > 0:
+                try:
+                    dates = []
+                    values = []
+                    for item in result['returns']:
+                        if isinstance(item, dict) and 'date' in item and 'value' in item:
+                            # 处理日期格式，支持 "2020-01-01 00:00:00" 和 "2020-01-01"
+                            date_str = item['date'].split(' ')[0]  # 只取日期部分
+                            dates.append(datetime.strptime(date_str, '%Y-%m-%d'))
+                            values.append(item['value'] or 0.0)
+                    if dates and values:
+                        ax1.plot(dates, values, linewidth=2, color='blue', label='策略收益')
+                        ax1.set_title('累计收益曲线')
+                        ax1.set_ylabel('累计收益 (%)')
+                        ax1.grid(True, alpha=0.3)
+                        ax1.legend()
+                    else:
+                        raise ValueError("Invalid data format")
+                except Exception as e:
+                    ax1.text(0.5, 0.5, f'收益数据格式错误\n{str(e)[:50]}...', ha='center', va='center', transform=ax1.transAxes)
+                    ax1.set_title('累计收益曲线')
+            else:
+                ax1.text(0.5, 0.5, '收益数据不可用', ha='center', va='center', transform=ax1.transAxes)
+                ax1.set_title('累计收益曲线')
+
+            # 2. 回撤曲线
+            ax2 = axes[0, 1]
+            if 'drawdown' in result and isinstance(result['drawdown'], list) and len(result['drawdown']) > 0:
+                try:
+                    dates = []
+                    drawdowns = []
+                    for item in result['drawdown']:
+                        if isinstance(item, dict) and 'date' in item and 'value' in item:
+                            dates.append(datetime.strptime(item['date'], '%Y-%m-%d'))
+                            drawdowns.append(item['value'])
+                    if dates and drawdowns:
+                        ax2.fill_between(dates, drawdowns, 0, alpha=0.3, color='red', label='回撤')
+                        ax2.set_title('回撤曲线')
+                        ax2.set_ylabel('回撤 (%)')
+                        ax2.grid(True, alpha=0.3)
+                        ax2.legend()
+                    else:
+                        raise ValueError("Invalid data format")
+                except Exception:
+                    ax2.text(0.5, 0.5, '回撤数据格式错误', ha='center', va='center', transform=ax2.transAxes)
+                    ax2.set_title('回撤曲线')
+            else:
+                ax2.text(0.5, 0.5, '回撤数据不可用', ha='center', va='center', transform=ax2.transAxes)
+                ax2.set_title('回撤曲线')
+
+            # 3. 持仓变化
+            ax3 = axes[1, 0]
+            if 'positions' in result and isinstance(result['positions'], list) and len(result['positions']) > 0:
+                try:
+                    dates = []
+                    positions = []
+                    for item in result['positions']:
+                        if isinstance(item, dict) and 'date' in item and 'value' in item:
+                            dates.append(datetime.strptime(item['date'], '%Y-%m-%d'))
+                            positions.append(item['value'])
+                    if dates and positions:
+                        ax3.plot(dates, positions, linewidth=2, color='green', label='持仓数量')
+                        ax3.set_title('持仓变化')
+                        ax3.set_ylabel('持仓数量')
+                        ax3.grid(True, alpha=0.3)
+                        ax3.legend()
+                    else:
+                        raise ValueError("Invalid data format")
+                except Exception:
+                    ax3.text(0.5, 0.5, '持仓数据格式错误', ha='center', va='center', transform=ax3.transAxes)
+                    ax3.set_title('持仓变化')
+            else:
+                ax3.text(0.5, 0.5, '持仓数据不可用', ha='center', va='center', transform=ax3.transAxes)
+                ax3.set_title('持仓变化')
+
+            # 4. 统计信息
+            ax4 = axes[1, 1]
+            ax4.axis('off')
+
+            # 安全获取值，避免None
+            final_value = result.get('final_value', 0) or 0
+            total_return = result.get('total_return', 0) or 0
+            annualized_return = result.get('annualized_return', 0) or 0
+            sharpe_ratio = result.get('sharpe_ratio', 0) or 0
+            max_drawdown = result.get('max_drawdown', 0) or 0
+            total_trades = result.get('total_trades', 0) or 0
+            win_rate = result.get('win_rate', 0) or 0
+
+            stats_text = f"""
+最终资金: {format_currency(final_value)}
+总收益: {format_currency(final_value - 1000000)}
+总收益率: {format_percentage(total_return / 100)}
+年化收益率: {format_percentage(annualized_return)}
+夏普比率: {sharpe_ratio:.2f}
+最大回撤: {format_percentage(max_drawdown)}
+交易次数: {total_trades}
+胜率: {win_rate:.2%}
+            """
+            ax4.text(0.1, 0.9, stats_text, transform=ax4.transAxes, fontsize=11,
+                    verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+
+            # 调整布局
+            plt.tight_layout()
+
+            # 保存图表
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            chart_filename = f"{strategy_name}_chart_{timestamp}.png"
+            chart_filepath = os.path.join(self.output_dir, 'charts', chart_filename)
+            plt.savefig(chart_filepath, dpi=300, bbox_inches='tight')
+            print(f"✓ 图表已保存到: {chart_filepath}")
+
+            # 显示图表（如果在交互式环境中）
+            plt.close(fig)
+
+        except Exception as e:
+            print(f"绘制图表失败: {e}")
+            import traceback
+            traceback.print_exc()
 
 
 class SignalOnlyBacktest:

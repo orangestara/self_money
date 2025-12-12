@@ -4,7 +4,7 @@
 symbol = "000300.SH"
 
 [backtest_params]
-start_date = "2020-01-01"
+start_date = "2022-01-01"
 end_date = "2024-12-31"
 initial_cash = 1_000_000
 
@@ -28,7 +28,7 @@ w = 0.2
 [trading_params]
 max_holdings = 3
 score_threshold = 0
-min_positive_count = 7
+min_positive_count = 1
 
 [risk_params]
 stop_loss_base = 0.05
