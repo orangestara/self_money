@@ -135,7 +135,7 @@ def run_etf_rotation():
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'examples'))
     from run_strategy import load_etf_data
 
-    data_dict = load_etf_data(etf_list, data_dir='../data')
+    data_dict = load_etf_data(etf_list, data_dir='data')
 
     if not data_dict:
         print("\n⚠️  没有找到数据文件！")
@@ -182,7 +182,7 @@ def run_grid_trading():
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'examples'))
     from run_strategy import load_etf_data
 
-    data_dict = load_etf_data(etf_list, data_dir='../data')
+    data_dict = load_etf_data(etf_list, data_dir='data')
 
     if not data_dict:
         print("\n⚠️  没有找到数据文件！")
