@@ -36,11 +36,48 @@ class BaseStrategy(bt.Strategy):
         self.signal_history = []  # 信号历史
         self.trade_history = []  # 交易历史
 
-        # 数据引用
+        # 数据引用 - 创建从data对象到symbol的映射
         self.data_dict = {}
+        self.data_to_symbol = {}  # 映射data对象到symbol
+
+        # 尝试从各个属性获取symbol名称
         for i, data in enumerate(self.datas):
-            symbol = getattr(data._name, 'name', f"UNKNOWN_{i}")
+            symbol = None
+
+            # 方法1: 从_name.name获取
+            if hasattr(data, '_name') and hasattr(data._name, 'name'):
+                symbol = data._name.name
+
+            # 方法2: 从data._name获取（可能是字符串）
+            elif hasattr(data, '_name'):
+                if isinstance(data._name, str):
+                    symbol = data._name
+                elif hasattr(data._name, 'name'):
+                    symbol = data._name.name
+
+            # 方法3: 从data获取
+            if not symbol and hasattr(data, 'name'):
+                symbol = data.name
+
+            # 方法4: 从参数获取（Backtrader在adddata时会传递）
+            if not symbol:
+                # 检查是否有参数包含symbol信息
+                for param_name in dir(data):
+                    if 'name' in param_name.lower():
+                        try:
+                            val = getattr(data, param_name)
+                            if isinstance(val, str) and len(val) > 0:
+                                symbol = val
+                                break
+                        except:
+                            pass
+
+            # 如果还是找不到，使用索引
+            if not symbol:
+                symbol = f"UNKNOWN_{i}"
+
             self.data_dict[symbol] = data
+            self.data_to_symbol[data] = symbol
 
         # 日志
         self.log("策略初始化完成", level=1)

@@ -216,7 +216,14 @@ class StrategyManager:
         # 添加数据
         for symbol, data in data_dict.items():
             try:
+                # 确保列名是大写的
+                data.columns = [col.upper() if isinstance(col, str) else col for col in data.columns]
+
+                # 创建PandasData并设置名称
                 datafeed = bt.feeds.PandasData(dataname=data)
+                # 显式设置名称属性
+                datafeed._name = type('obj', (object,), {'name': symbol})()
+
                 cerebro.adddata(datafeed, name=symbol)
             except Exception as e:
                 print(f"添加数据{symbol}失败: {e}")

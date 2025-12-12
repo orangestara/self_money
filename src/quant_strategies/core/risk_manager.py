@@ -29,13 +29,66 @@ class RiskManager:
         self.market_vol_quantile = 0.5
         self.total_position_ratio = 1.0
 
-    def update_market_risk(self, benchmark_data: Dict) -> None:
+    def update_market_risk(self, benchmark_data) -> None:
         """更新市场风险状态"""
         try:
-            benchmark_close = benchmark_data['close']
+            benchmark_close = None
+
+            # 检查数据类型并提取Close价格
+            if hasattr(benchmark_data, 'columns'):
+                # DataFrame情况
+                if 'Close' in benchmark_data.columns:
+                    benchmark_close = benchmark_data['Close']
+                elif 'close' in benchmark_data.columns:
+                    benchmark_close = benchmark_data['close']
+                else:
+                    raise ValueError("DataFrame中未找到Close或close列")
+            elif hasattr(benchmark_data, 'get'):
+                # 字典-like对象情况
+                close_val = benchmark_data.get('Close')
+                if close_val is not None:
+                    benchmark_close = close_val
+                else:
+                    close_val = benchmark_data.get('close')
+                    if close_val is not None:
+                        benchmark_close = close_val
+                    else:
+                        raise ValueError("字典中未找到Close或close键")
+            elif hasattr(benchmark_data, 'iloc'):
+                # 已经是Series
+                benchmark_close = benchmark_data
+            else:
+                raise ValueError(f"不支持的数据类型: {type(benchmark_data)}")
+
+            # 确保是pandas Series
+            if not hasattr(benchmark_close, 'iloc'):
+                raise ValueError("提取的价格数据不是有效的pandas Series")
+
+            # 清理数据：转换为数值类型并处理NaN
+            if benchmark_close.dtype == 'object':
+                # 如果是object类型，尝试转换为数值
+                try:
+                    benchmark_close = pd.to_numeric(benchmark_close, errors='coerce')
+                except:
+                    pass
+
+            # 移除NaN值
+            benchmark_close = benchmark_close.dropna()
+
+            # 调试输出
+            if hasattr(benchmark_close, 'iloc'):
+                print(f"[DEBUG] 基准数据长度: {len(benchmark_close)}, 前5个值: {benchmark_close.iloc[:5].tolist()}")
+
+            # 确保数据足够
+            if len(benchmark_close) < 20:
+                raise ValueError(f"有效价格数据不足: {len(benchmark_close)}")
 
             # 计算市场波动率分位
             returns = benchmark_close.pct_change().dropna()
+            print(f"[DEBUG] 收益率长度: {len(returns)}, 前5个值: {returns.iloc[:5].tolist() if len(returns) > 0 else 'N/A'}")
+            if len(returns) < 20:
+                raise ValueError(f"收益率数据不足: {len(returns)}")
+
             self.market_vol_quantile = calculate_market_vol_quantile(returns, self.vol_quantile_window)
 
             # 动态调整风控参数
@@ -56,9 +109,12 @@ class RiskManager:
 
         except Exception as e:
             print(f"更新市场风险失败: {e}")
+            import traceback
+            traceback.print_exc()
             # 使用默认值
             self.market_risk_level = 'neutral'
             self.total_position_ratio = 0.8
+            self.market_vol_quantile = 0.5
 
     def check_stop_loss(
         self,

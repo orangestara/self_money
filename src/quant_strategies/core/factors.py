@@ -43,6 +43,20 @@ class FactorCalculator:
             low = np.array(data['Low'].tolist(), dtype=float)
             volume = np.array(data['Volume'].tolist(), dtype=float)
 
+            # 数据验证：检查是否有足够的有效数据
+            if len(close) < 10:
+                return {'composite': 0.0}
+
+            # 过滤掉0值和NaN值
+            valid_mask = (close > 0) & (~np.isnan(close)) & (~np.isinf(close))
+            if not np.any(valid_mask) or np.sum(valid_mask) < 10:
+                return {'composite': 0.0}
+
+            close = close[valid_mask]
+            high = high[valid_mask]
+            low = low[valid_mask]
+            volume = volume[valid_mask]
+
             # 成交量过滤
             vol_ratio = calculate_volume_ratio(volume, self.volume_short_window, self.volume_long_window)
             if vol_ratio > self.volume_filter_threshold:
@@ -51,9 +65,22 @@ class FactorCalculator:
             # 跌幅过滤
             if len(close) >= 4:
                 try:
-                    day1_return = close[-1] / close[-2] - 1
-                    day2_return = close[-2] / close[-3] - 1
-                    day3_return = close[-3] / close[-4] - 1
+                    # 安全计算收益率，避免除零
+                    if close[-2] > 0:
+                        day1_return = close[-1] / close[-2] - 1
+                    else:
+                        day1_return = 0.0
+
+                    if close[-3] > 0:
+                        day2_return = close[-2] / close[-3] - 1
+                    else:
+                        day2_return = 0.0
+
+                    if close[-4] > 0:
+                        day3_return = close[-3] / close[-4] - 1
+                    else:
+                        day3_return = 0.0
+
                     if (day1_return < -self.drop_threshold or
                         day2_return < -self.drop_threshold or
                         day3_return < -self.drop_threshold or
@@ -85,6 +112,10 @@ class FactorCalculator:
     def _calculate_momentum_factor(self, close: np.ndarray) -> float:
         """计算动量因子"""
         try:
+            # 确保所有价格都是正数
+            if np.any(close <= 0):
+                return 0.0
+
             y = np.log(close)
             x = np.arange(len(y))
             slope, intercept = np.polyfit(x, y, 1)

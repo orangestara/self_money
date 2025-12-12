@@ -174,11 +174,22 @@ class ETFRotationStrategy(BaseStrategy):
             # 获取基准数据
             if hasattr(self, 'benchmark_data'):
                 benchmark_data = self._get_historical_data(self.benchmark_data, days=90)
-                if benchmark_data is not None:
-                    self.risk_manager.update_market_risk(benchmark_data)
+                if benchmark_data is not None and len(benchmark_data) > 20:
+                    # 检查基准数据是否有效（不能全为0）
+                    close_prices = benchmark_data['Close']
+                    if close_prices.sum() > 0 and close_prices.mean() > 0.001:
+                        self.risk_manager.update_market_risk(benchmark_data)
 
-                    if self.params.log_level > 1:
-                        self.risk_manager.print_risk_status()
+                        if self.params.log_level > 1:
+                            self.risk_manager.print_risk_status()
+                    else:
+                        # 如果基准数据无效（全为0或过小），跳过风险更新
+                        if self.params.log_level > 2:
+                            self.log(f"基准数据无效（全为0或过小），跳过风险更新", level=2)
+                else:
+                    # 如果基准数据不足，跳过风险更新
+                    if self.params.log_level > 2:
+                        self.log(f"基准数据不足，跳过风险更新", level=2)
         except Exception as e:
             self.log(f"更新市场风险失败: {e}", level=0)
 
@@ -190,13 +201,31 @@ class ETFRotationStrategy(BaseStrategy):
                 ago = i  # 从当前bar往回ago个bar
                 if ago >= len(data):
                     break
+
+                # 安全获取并转换数值
+                def safe_float(val):
+                    if val is None or val == 0:
+                        return 0.0
+                    if isinstance(val, (int, float)):
+                        return float(val)
+                    if isinstance(val, str):
+                        try:
+                            return float(val)
+                        except:
+                            return 0.0
+                    # 处理array.array等情况
+                    try:
+                        return float(val)
+                    except:
+                        return 0.0
+
                 hist.append({
                     'datetime': data.datetime.get(ago=-ago),
-                    'Open': data.open.get(ago=-ago),
-                    'High': data.high.get(ago=-ago),
-                    'Low': data.low.get(ago=-ago),
-                    'Close': data.close.get(ago=-ago),
-                    'Volume': data.volume.get(ago=-ago),
+                    'Open': safe_float(data.open.get(ago=-ago)),
+                    'High': safe_float(data.high.get(ago=-ago)),
+                    'Low': safe_float(data.low.get(ago=-ago)),
+                    'Close': safe_float(data.close.get(ago=-ago)),
+                    'Volume': safe_float(data.volume.get(ago=-ago)),
                 })
 
             if len(hist) < 10:
@@ -205,10 +234,17 @@ class ETFRotationStrategy(BaseStrategy):
             df = pd.DataFrame(hist)
             df.set_index('datetime', inplace=True)
             df.sort_index(inplace=True)
+
+            # 确保所有数值列都是float类型
+            for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(float)
+
             return df
 
         except Exception as e:
             self.log(f"获取历史数据失败: {e}", level=0)
+            import traceback
+            traceback.print_exc()
             return None
 
     def _get_target_positions(self) -> Dict[str, float]:
@@ -367,12 +403,7 @@ class ETFRotationStrategy(BaseStrategy):
                 continue
 
             # 获取symbol
-            symbol = None
-            for sym, dat in self.data_dict.items():
-                if dat is data:
-                    symbol = sym
-                    break
-
+            symbol = self.data_to_symbol.get(data)
             if symbol is None or symbol not in self.hold_cost:
                 continue
 
@@ -421,12 +452,7 @@ class ETFRotationStrategy(BaseStrategy):
         for data, position in self.positions.items():
             if position.size > 0:
                 # 获取symbol
-                symbol = None
-                for sym, dat in self.data_dict.items():
-                    if dat is data:
-                        symbol = sym
-                        break
-
+                symbol = self.data_to_symbol.get(data)
                 if symbol and symbol not in target_positions:
                     self.order_target_percent(data, 0)
                     self.log(f"卖出: {symbol} (不在目标列表)")
